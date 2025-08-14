@@ -390,6 +390,122 @@ async function processArray(array) {
 
 </script>
 </head>
+<script>
+/* ===== iPad Fix Bundle: overlay + buttons + audio unlock + single channel ===== */
+(function(){
+  /* 0) لا تدع أي طبقة تغطي اللمس */
+  function hideOverlay(){
+    var ov = document.getElementById('overlay');
+    if(ov){ ov.style.display='none'; ov.style.pointerEvents='none'; ov.style.zIndex='-1'; }
+  }
+  hideOverlay();
+  window.addEventListener('load', hideOverlay, {once:true});
+  // failsafe: حتى لو صار خطأ تحميل
+  setTimeout(hideOverlay, 8000);
+
+  /* 1) افتح الصوت على iOS بأول لمسة */
+  function unlockAudioOnce(){
+    try{
+      var a=new Audio();
+      a.muted=true;                   // مهم لسياسة iOS
+      a.src='E3_SM3_Intro.mp3';       // أي ملف قصير عندك (حتى لو ما تستخدمه)
+      a.play().then(function(){ a.pause(); a.src=''; }).catch(function(){});
+    }catch(_){}
+    document.removeEventListener('touchend', unlockAudioOnce, true);
+  }
+  document.addEventListener('touchend', unlockAudioOnce, true);
+
+  /* 2) اضمن أن زرّي Start/Next يشتغلوا بلمسة واحدة بدون تكرار */
+  function rebindButtonOnce(id, call){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var clean = el.cloneNode(true);           // نحذف onclick والمستمعين القدامى
+    el.parentNode.replaceChild(clean, el);
+
+    var busy = false;
+    function once(fn){
+      return function(e){
+        e.preventDefault(); e.stopPropagation();
+        if (busy) return;
+        busy = true; setTimeout(function(){ busy=false; }, 250);
+        fn && fn.call(clean, e);
+      };
+    }
+
+    clean.addEventListener('pointerup', once(call), {passive:false}); // يغطي لمس/ماوس
+    // امنع click/touchend الإضافيين (يمنعون الازدواج)
+    clean.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+    clean.addEventListener('touchend', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+    clean.style.pointerEvents='auto'; clean.style.cursor='pointer';
+    return clean;
+  }
+
+  // اربط الأزرار الأربعة. غير IDs هنا لو مختلفة عندك.
+  rebindButtonOnce('butt',  function(){ if (window.introPage)   window.introPage(); });
+  rebindButtonOnce('butt1', function(){ if (window.landingPage) window.landingPage(); });
+  rebindButtonOnce('butt2', function(){ if (window.startActivity) window.startActivity(); });
+  rebindButtonOnce('butt3', function(){ location.reload(); });
+
+  /* 3) قناة صوت واحدة لمنع التداخل/التقطيع */
+  (function enforceSingleAudioChannel(){
+    var tries = 0;
+    var timer = setInterval(function(){
+      tries++;
+      if (Array.isArray(window.sounds) && window.sounds.length){
+        clearInterval(timer);
+        var single = new Audio();
+        single.preload = 'auto';
+        single.playsInline = true;
+
+        // لو عندك audioElements جاهزة: نستبدلها بإصدارات تعتمد القناة الواحدة
+        window.audioElements = window.sounds.map(function(file){
+          return {
+            play: function(){
+              try { single.pause(); single.currentTime = 0; } catch(_){}
+              if (file){
+                single.src = file;
+                var p = single.play(); if (p && p.catch) p.catch(function(){});
+              } else {
+                // سؤال بلا صوت → أظهر Next مباشرة
+                var b=document.getElementById('butt2');
+                if (b) b.style.display='block';
+                try{ $('#butt2').fadeIn(); }catch(_){}
+              }
+            },
+            pause: function(){ try{ single.pause(); }catch(_){ } }
+          };
+        });
+
+        // عند نهاية الصوت → أظهر Next
+        single.onended = function(){
+          var b=document.getElementById('butt2');
+          if (b) b.style.display='block';
+          try{ $('#butt2').fadeIn(); }catch(_){}
+        };
+      }
+      if (tries > 40) clearInterval(timer); // ~12 ثانية احتياط
+    }, 300);
+  })();
+
+  /* 4) اقتل أي عناصر ثابتة تغطي الأزرار بالغلط */
+  function killCovers(){
+    document.querySelectorAll('body *').forEach(function(el){
+      var st = getComputedStyle(el);
+      if (st.position==='fixed' && +st.zIndex>1000 && !el.closest('.butt')){
+        el.style.pointerEvents='none';
+      }
+    });
+  }
+  killCovers(); setInterval(killCovers, 800);
+})();
+</script>
+
+<style>
+/* تحسين لمس iOS ورفع الأزرار فوق أي طبقات */
+*{ -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+#butt,#butt1,#butt2,#butt3,.ctr button{ position:relative; z-index:2147483647; pointer-events:auto !important; }
+#overlay{ display:none !important; pointer-events:none !important; z-index:-1 !important; }
+</style>
 <body>
 	<div id="overlay">
         <img src="loading.gif" alt="Loading" id="loading-image">
