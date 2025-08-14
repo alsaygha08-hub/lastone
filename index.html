@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>English 3 Speaking Milestone 3</title>
+<!-- <script type="text/javascript" src="prompts.js"></script> -->
+<script type="text/javascript" src="jquery-3.6.4.min.js"></script>
+<script type="text/javascript" src="jquery-ui.min.js"></script>
+<script type="text/javascript" src="jquery.ui.touch-punch.min.js"></script>
+
+<style>
+.promptHolder {
+background-color: #f7f7f7;
+border: 2px solid #EBEBEB;
+color: #468283;
+font-size: calc(1.75vw + 1.75vh);
+vertical-align: middle;
+width: 90%;
+border-radius: 10px;
+margin: auto;
+font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+/* display: flex; */
+  justify-content: center;
+  align-items: center;
+  padding: 1em;
+  /* min-height: 50vh; */
+}
+#pageHead {
+	color: #468283;
+	font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif
+}
+
+#closeX {
+	cursor: pointer;
+}
+#cont {
+
+	text-align: center; 
+	height: 95vh; 
+	width: 95vw; 
+	overflow: scroll; 
+	margin: auto;
+}
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.butt {
+ background-color: #84BD00;
+ color: white;
+ border-radius: 6px;
+ width: 100px;
+ left: 50%;
+ transform: translateX(-50%) translateZ(0);
+ padding: 10px;
+ text-align: center;
+ font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+ font-size: 1.5em;
+ box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+ position: fixed;
+ bottom: 20px;
+ cursor: pointer;
+}
+.pCount {
+
+width:93vw; 
+text-align: center; 
+font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; 
+
+}
+
+.zoom {
+	position: absolute;
+	top: 5px;
+	left: 5px;
+	width: 100vw;
+	height: 100vh;
+	background-color: rgba(255,255,255, 0.9);
+	z-index: 999;
+}
+
+.butt:active {
+ 
+  transform: translateX(-50%) translateZ(0) scale(0.96);
+  /* Scaling button to 0.98 to its original size */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  /* Lowering the shadow */
+    
+}
+
+#imageHolder {
+	width: 90%; 
+	justify-content: center; 
+	cursor: pointer; 
+	display: none;
+	margin: auto;
+	overflow: visible;
+	
+}
+
+#promptPic {
+	display: block; 
+	margin-left: auto; 
+	margin-right: auto; 
+	margin-top: 10px; 
+	margin-bottom: 10px; 
+	max-width: 250px;
+	max-height: 150px; 
+	box-shadow: 0 2px 2px rgba(0,0,0,0.3);
+	cursor: pointer;
+}
+@media only screen and (max-width: 750px) {
+  .promptHolder{
+    font-size: 2em;
+	width: 85%;
+  }
+  .pCount {
+	width: 85%;
+	padding-left: 5rem;
+
+  }
+ 
+}
+
+@media only screen and (max-width: 500px) {
+  /* .promptHolder{
+    font-size: 1rem;
+	
+  } */
+  .pCount {
+	
+	padding-left: 3rem;
+
+  }
+  #promptPic {
+	max-width: 150px;
+  }
+}
+
+</style>
+
+<script>
+// v17: Bind audio unlock/play to original Continue button
+(function(){
+  function prime(a){ try{ a.muted=true; a.play().then(()=>{a.pause();a.currentTime=0;a.muted=false;}).catch(()=>{});}catch(e){} }
+  function safePlay(a){ try{ a.currentTime=0; a.muted=false; a.play().catch(()=>{});}catch(e){} }
+  window.addEventListener('DOMContentLoaded', function(){
+    const cont = document.getElementById('butt'); // original Continue
+    if (!cont) return;
+    if (cont._bound) return; cont._bound = true;
+    cont.addEventListener('click', function(){
+      // prime possible audio elements
+      [window.badge, window.instr, window.endBlurb, window.tgtPhrase].forEach(x=>{ if(x) prime(x); });
+      // explicitly play intro if available
+      if (window.badge) safePlay(window.badge);
+      // let original handler run normally
+    }, {capture:true}); // capture to run before original onclick
+  }, {once:true});
+})();
+</script>
+
+</body> 
+</html>
