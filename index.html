@@ -613,6 +613,129 @@ async function processArray(array) {
   setTimeout(function(){ var ov=document.getElementById('overlay'); if(ov){ ov.style.display='none'; ov.style.pointerEvents='none'; ov.style.zIndex='-1'; } }, 8000);
 })();
 </script>
+<script>
+/* ===== Fix: طابق الصوت مع السؤال دائماً + قناة صوت واحدة ===== */
+(function(){
+  // لا شَفل نهائياً (لو فيه شَفل في أي مكان ثاني)
+  window.shuffle = function(a){ return a; };
+
+  // قناة صوت واحدة
+  var single = new Audio();
+  single.preload = 'auto';
+  single.playsInline = true;
+
+  function showNextBtn(){
+    var b = document.getElementById('butt2');
+    if (b) b.style.display = 'block';
+    try { $('#butt2').fadeIn(); } catch(_){}
+  }
+
+  // شغّل صوت السؤال حسب الفهرس مباشرة من promptBank
+  function playCurrent(index){
+    var pb = Array.isArray(window.promptBank) ? window.promptBank : [];
+    var it = pb[index] || {};
+    var src = it.audio || '';
+    if (src && !/\.mp3$/i.test(src)) src += '.mp3';
+
+    try { single.pause(); single.currentTime = 0; } catch(_){}
+
+    if (src){
+      single.src = src;
+      var p = single.play();
+      if (p && p.catch) p.catch(function(){});
+    } else {
+      // سؤال بلا صوت → أظهر Next فوراً
+      showNextBtn();
+    }
+  }
+
+  single.onended = showNextBtn;
+
+  // ألغِ أي audioElements/sounds قديمة عشان ما تُستخدم بالغلط
+  try { window.audioElements = []; } catch(_){}
+  try { window.sounds = []; } catch(_){}
+
+  // لفّ startActivity بحيث يعرض السؤال ويشغّل صوته المتوافق دائماً
+  var oldStart = window.startActivity;
+  window.startActivity = function(){
+    // لو عندك مقدمة صوتية توقف
+    try{ instr && instr.pause && instr.pause(); }catch(_){}
+
+    // عناصر الواجهة
+    var head = document.getElementById('pageHead');
+    var next = document.getElementById('butt2');
+    var imgHolder = document.getElementById('image_holder');
+    var promptPic = document.getElementById('promptPic');
+    var promptHolder = document.getElementById('promptHolder');
+    var pno = document.getElementById('pno');
+    var pCount = document.getElementById('pCount');
+    var restart = document.getElementById('butt3');
+
+    var pb = Array.isArray(window.promptBank) ? window.promptBank : [];
+    // زِد العداد بنفس منطقك (counter يبدأ من 0 في كودك)
+    window.counter = (window.counter|0) + 1;
+
+    if (head) head.style.display = 'block';
+    if (next){ next.style.display = 'none'; next.textContent = 'Next'; }
+    if (imgHolder) imgHolder.style.display = 'none';
+
+    // خلصنا؟
+    if (window.counter > pb.length || pb.length === 0){
+      if (promptHolder) promptHolder.textContent = 'You have finished.';
+      if (pCount) pCount.style.display = 'none';
+      if (next) next.style.display = 'none';
+      if (restart) restart.style.display = 'inline-block';
+      try{ endBlurb && endBlurb.play && endBlurb.play(); }catch(_){}
+      return;
+    }
+
+    // اعرض السؤال الحالي
+    var item = pb[window.counter - 1] || {};
+    if (pCount) pCount.style.display = 'block';
+    if (promptHolder) promptHolder.textContent = item.text || '';
+    if (pno) pno.textContent = (window.counter + ' / ');
+
+    if (item.image){
+      if (imgHolder) imgHolder.style.display = 'block';
+      if (promptPic) promptPic.src = item.image;
+    }
+
+    // شغّل صوت هذا السؤال فقط
+    playCurrent(window.counter - 1);
+  };
+
+  // تأمين: لو فيه handlers قديمة على زر Start/Next قد تشغّل مرتين، نستبدل الزر بنسخة نظيفة بحدث واحد
+  (function rebindNextOnce(){
+    var old = document.getElementById('butt2');
+    if(!old) return;
+    var clean = old.cloneNode(true);
+    old.parentNode.replaceChild(clean, old);
+    var busy=false;
+    function once(fn){ return function(e){ e.preventDefault(); e.stopPropagation(); if(busy) return; busy=true; setTimeout(function(){busy=false;},250); fn(); }; }
+    clean.addEventListener('pointerup', once(function(){ window.startActivity && window.startActivity(); }), {passive:false});
+    // امنع click/touchend الإضافية (تمنع التنفيذ المزدوج على iPad)
+    clean.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+    clean.addEventListener('touchend', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+    clean.style.pointerEvents='auto'; clean.style.cursor='pointer';
+  })();
+
+  // افتح الصوت على iOS من أول لمسة (مرة واحدة)
+  function unlockAudioOnce(){
+    try{
+      var a=new Audio(); a.muted=true; a.src='E3_SM3_Intro.mp3';
+      a.play().then(function(){ a.pause(); a.src=''; }).catch(function(){});
+    }catch(_){}
+    document.removeEventListener('touchend', unlockAudioOnce, true);
+  }
+  document.addEventListener('touchend', unlockAudioOnce, true);
+
+  // failsafe: اخفِ overlay بعد 8 ثواني
+  setTimeout(function(){
+    var ov=document.getElementById('overlay');
+    if(ov){ ov.style.display='none'; ov.style.pointerEvents='none'; ov.style.zIndex='-1'; }
+  }, 8000);
+})();
+</script>
 <body>
 	<div id="overlay">
         <img src="loading.gif" alt="Loading" id="loading-image">
