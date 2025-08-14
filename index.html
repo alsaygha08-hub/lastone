@@ -601,6 +601,64 @@ async function processArray(array) {
 // 	var functionFolder = resources_bb_url+func+"/"
 // 	baseUrls.push(functionFolder);
 // }
+<script>
+/* ===== Offline patch: 12 أسئلة ثابتة بدون جلب من Blackboard ===== */
+(function(){
+  // 1) عطّل استدعاء getPrompts والشَفل
+  window.getPrompts = function(){ return Promise.resolve([]); };
+  window.shuffle = function(a){ return a; };
+
+  // 2) بدّل processArray بحيث يزرع 12 سؤال محليًا (عدّل النصوص/الأصوات لاحقًا)
+  window.processArray = async function(_){
+    // عدّل/أضف الصوت لاحقًا (خليها أسماء ملفات موجودة عندك بالمستودع)
+    window.promptBank = [
+      { text: "You are scheduling a meeting. Talk about its duration.",                   audio: "g1.mp3",  image: "1.png"  },
+      { text: "You are planning a workshop. Talk about its duration.",                    audio: "g2.mp3",  image: "2.png"  },
+      { text: "You repaired a pump. Talk about the duration of the repair work.",         audio: "g3.mp3",  image: "3.png"  },
+      { text: "Ask Ahmed about the duration of the meeting.",                             audio: "g4.mp3",  image: ""       },
+      { text: "Ask Noora about the duration of her shift.",                               audio: "g5.mp3",  image: ""       },
+      { text: "Kamal started in 2020. Talk about duration.",                              audio: "g6.mp3",  image: ""       },
+      { text: "You have a leadership course. Talk about its duration.",                   audio: "g7.mp3",  image: "7.png"  },
+      { text: "You are organizing a safety inspection. Talk about its duration.",         audio: "g8.mp3",  image: "8.png"  },
+      { text: "You completed maintenance work. Talk about its duration.",                 audio: "g9.mp3",  image: "9.png"  },
+      { text: "Sara took a break. Talk about its duration.",                              audio: "g10.mp3", image: "10.png" },
+      { text: "State a rule and explain it (worksite rule).",                             audio: "",        image: ""       },
+      { text: "Make an offer to help a co-worker and accept/refuse properly.",            audio: "",        image: ""       }
+    ];
+
+    // 3) ابنِ قناة صوت واحدة (لا تداخل). لو الصوت ناقص يظل Next ظاهر.
+    var single = new Audio(); single.preload='auto'; single.playsInline = true;
+    window.sounds = window.promptBank.map(p => p.audio || "");
+    window.audioElements = window.sounds.map(function(file){
+      return {
+        play: function(){
+          try { single.pause(); single.currentTime=0; } catch(_){}
+          if (file){
+            single.src = file;
+            var pr = single.play(); if (pr && pr.catch) pr.catch(function(){});
+          } else {
+            // سؤال بلا صوت → أظهر Next فورًا
+            var b = document.getElementById('butt2');
+            if (b) b.style.display='block';
+            try { $('#butt2').fadeIn(); } catch(_){}
+          }
+        },
+        pause: function(){ try{ single.pause(); }catch(_){} }
+      };
+    });
+    single.onended = function(){
+      var b = document.getElementById('butt2');
+      if (b) b.style.display='block';
+      try{ $('#butt2').fadeIn(); }catch(_){}
+    };
+
+    // 4) حدّث العداد وأخفِ شاشة التحميل
+    try { document.getElementById('overlay').style.display='none'; } catch(_){}
+    try { document.getElementById('pto').textContent = String(window.promptBank.length); } catch(_){}
+    try { $('#pCount').hide(); } catch(_){}
+  };
+})();
+</script>
 processArray(targetFunctions);
 </script>
 </body> 
