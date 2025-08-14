@@ -506,6 +506,113 @@ async function processArray(array) {
 #butt,#butt1,#butt2,#butt3,.ctr button{ position:relative; z-index:2147483647; pointer-events:auto !important; }
 #overlay{ display:none !important; pointer-events:none !important; z-index:-1 !important; }
 </style>
+<script>
+/* ===== Safe Mode: ضَمّن 12 سؤال محليًا إذا promptBank طلع فاضي على iPad ===== */
+(function(){
+  // 1) دالة تبني قناة صوت واحدة وتضبط العدّاد والـUI
+  function buildSingleChannel(){
+    try {
+      var single = new Audio();
+      single.preload = 'auto';
+      single.playsInline = true;
+
+      // جهّز sounds حسب promptBank
+      window.sounds = (window.promptBank || []).map(function(p){
+        var f = (p && p.audio) ? p.audio : "";
+        return f && !/\.mp3$/i.test(f) ? (f + ".mp3") : f;
+      });
+
+      // لفّ الطبقة الصوتية على قناة واحدة
+      window.audioElements = window.sounds.map(function(file){
+        return {
+          play: function(){
+            try { single.pause(); single.currentTime = 0; } catch(_){}
+            if (file){
+              single.src = file;
+              var pr = single.play(); if (pr && pr.catch) pr.catch(function(){});
+            } else {
+              // سؤال بلا صوت → أظهر Next مباشرة
+              var b = document.getElementById('butt2');
+              if (b) b.style.display = 'block';
+              try { $('#butt2').fadeIn(); } catch(_){}
+            }
+          },
+          pause: function(){ try{ single.pause(); }catch(_){} }
+        };
+      });
+
+      single.onended = function(){
+        var b = document.getElementById('butt2');
+        if (b) b.style.display = 'block';
+        try { $('#butt2').fadeIn(); } catch(_){}
+      };
+    } catch(e){ console.log('single-channel error', e); }
+  }
+
+  // 2) أسئلة محليّة (بدون اعتماد على Blackboard)
+  var LOCAL_12 = [
+    { text: "You are scheduling a meeting. Talk about its duration.",                   audio: "g1.mp3",  image: "1.png"  },
+    { text: "You are planning a workshop. Talk about its duration.",                    audio: "g2.mp3",  image: "2.png"  },
+    { text: "You repaired a pump. Talk about the duration of the repair work.",         audio: "g3.mp3",  image: "3.png"  },
+    { text: "Ask Ahmed about the duration of the meeting.",                             audio: "g4.mp3",  image: ""       },
+    { text: "Ask Noora about the duration of her shift.",                               audio: "g5.mp3",  image: ""       },
+    { text: "Kamal started in 2020. Talk about duration.",                              audio: "g6.mp3",  image: ""       },
+    { text: "You have a leadership course. Talk about its duration.",                   audio: "g7.mp3",  image: "7.png"  },
+    { text: "You are organizing a safety inspection. Talk about its duration.",         audio: "g8.mp3",  image: "8.png"  },
+    { text: "You completed maintenance work. Talk about its duration.",                 audio: "g9.mp3",  image: "9.png"  },
+    { text: "Sara took a break. Talk about its duration.",                              audio: "g10.mp3", image: "10.png" },
+    { text: "State a worksite rule and explain it.",                                    audio: "",        image: ""       },
+    { text: "Make an offer to help a co-worker and accept/refuse properly.",            audio: "",        image: ""       }
+  ];
+
+  // 3) أداة أمان: تأكد أن promptBank جاهز. إن كان فاضي → ازرع LOCAL_12
+  function ensurePromptsReady(){
+    try {
+      if (!Array.isArray(window.promptBank) || window.promptBank.length === 0){
+        console.log('[SafeMode] promptBank empty — using LOCAL_12');
+        window.promptBank = LOCAL_12.slice();
+        // حدّث العداد/الواجهة
+        var pto = document.getElementById('pto'); if (pto) pto.textContent = String(window.promptBank.length);
+        var ov  = document.getElementById('overlay'); if (ov){ ov.style.display='none'; ov.style.pointerEvents='none'; ov.style.zIndex='-1'; }
+        try { $('#pCount').hide(); } catch(_){}
+        buildSingleChannel();
+      }
+    } catch(e){ console.log('ensurePromptsReady error', e); }
+  }
+
+  // 4) لفّ startActivity الأصلي بحيث يضمن الأسئلة قبل العرض
+  var _start = window.startActivity;
+  window.startActivity = function(){
+    ensurePromptsReady();
+    if (typeof _start === 'function') return _start.apply(this, arguments);
+  };
+
+  // 5) إصلاح زر Start/Next على iPad (تنفيذ مرة واحدة لكل لمسة)
+  (function rebindNext(){
+    var old = document.getElementById('butt2');
+    if(!old) return;
+    var clean = old.cloneNode(true);
+    old.parentNode.replaceChild(clean, old);
+    var busy=false;
+    function once(fn){ return function(e){ e.preventDefault(); e.stopPropagation(); if(busy) return; busy=true; setTimeout(function(){busy=false;},250); fn(); }; }
+    clean.addEventListener('pointerup', once(function(){ window.startActivity && window.startActivity(); }), {passive:false});
+    clean.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+    clean.addEventListener('touchend', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+    clean.style.pointerEvents='auto'; clean.style.cursor='pointer';
+  })();
+
+  // 6) افتح الصوت في iOS بأول لمسة، وأخفِ overlay بعد 8 ثواني كشبّاك أمان
+  function unlockAudioOnce(){
+    try{
+      var a=new Audio(); a.muted=true; a.src='E3_SM3_Intro.mp3';
+      a.play().then(function(){ a.pause(); a.src=''; }).catch(function(){});
+    }catch(_){}
+    document.removeEventListener('touchend', unlockAudioOnce, true);
+  }
+  document.addEventListener('touchend', unlockAudioOnce, true);
+  setTimeout(function(){ var ov=document.getElementById('overlay'); if(ov){ ov.style.display='none'; ov.style.pointerEvents='none'; ov.style.zIndex='-1'; } }, 8000);
+})();
+</script>
 <body>
 	<div id="overlay">
         <img src="loading.gif" alt="Loading" id="loading-image">
